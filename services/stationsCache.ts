@@ -14,7 +14,16 @@ export async function readStationsCache(): Promise<{ stations: Station[]; fetche
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return null;
-    return { stations: parsed as Station[], fetchedAt };
+    const stations = (parsed as Station[]).map((s) => ({
+      ...s,
+      fuelPrices:
+        s.fuelPrices && Object.keys(s.fuelPrices).length > 0
+          ? s.fuelPrices
+          : s.pricePerLiter > 0
+            ? { precio: s.pricePerLiter }
+            : {},
+    }));
+    return { stations, fetchedAt };
   } catch {
     return null;
   }

@@ -1,10 +1,18 @@
-/** Peso de la distancia (km) en el score: score = precio + distanciaKm * factor */
+/** Máximo radio de búsqueda que el usuario puede elegir (km). */
+export const MAX_SEARCH_RADIUS_KM = 80;
+
+/** Valor inicial del radio de búsqueda (km). */
+export const DEFAULT_SEARCH_RADIUS_KM = 5;
+
+export const MIN_SEARCH_RADIUS_KM = 1;
+
+/** @deprecated Solo compatibilidad; el ranking ya no usa factor. */
 export const DEFAULT_SCORE_FACTOR = 12;
 
-/** Solo se consideran estaciones dentro de este radio (km) para ordenar y promedios */
-export const MAX_RADIUS_KM = 80;
-
 export const STORAGE_KEYS = {
+  searchRadiusKm: '@bencinabarata/search_radius_km',
+  fuelFilter: '@bencinabarata/fuel_filter',
+  /** Antiguo factor de score; ya no se usa en la UI. */
   scoreFactor: '@bencinabarata/score_factor',
   stationsCache: '@bencinabarata/stations_cache_v1',
   stationsCacheTs: '@bencinabarata/stations_cache_ts_v1',

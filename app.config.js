@@ -6,9 +6,11 @@
 require('dotenv').config();
 
 const androidAdMobAppId =
-  process.env.ADMOB_ANDROID_APP_ID ?? 'ca-app-pub-3940256099942544~3347511713';
+  (process.env.ADMOB_ANDROID_APP_ID || '').trim() ||
+  'ca-app-pub-3940256099942544~3347511713';
 const iosAdMobAppId =
-  process.env.ADMOB_IOS_APP_ID ?? 'ca-app-pub-3940256099942544~1458002511';
+  (process.env.ADMOB_IOS_APP_ID || '').trim() ||
+  'ca-app-pub-3940256099942544~1458002511';
 
 module.exports = {
   expo: {
@@ -63,6 +65,8 @@ module.exports = {
     ],
     extra: {
       cneApiToken: process.env.CNE_API_TOKEN ?? '',
+      /** Proxy HTTPS (Worker, Functions, etc.) que llama a la CNE con el Bearer en el servidor. */
+      cneStationsUrl: process.env.CNE_STATIONS_URL ?? '',
       admobBannerAndroid: process.env.ADMOB_BANNER_ANDROID_ID,
       admobBannerIos: process.env.ADMOB_BANNER_IOS_ID,
       eas: {
