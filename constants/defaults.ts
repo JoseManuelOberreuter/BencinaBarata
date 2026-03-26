@@ -6,6 +6,9 @@ export const DEFAULT_SEARCH_RADIUS_KM = 5;
 
 export const MIN_SEARCH_RADIUS_KM = 1;
 
+/** Máximo de filas en la lista previa (sin GPS), ordenada por precio. */
+export const PREVIEW_MAX_RESULTS = 20;
+
 /** @deprecated Solo compatibilidad; el ranking ya no usa factor. */
 export const DEFAULT_SCORE_FACTOR = 12;
 

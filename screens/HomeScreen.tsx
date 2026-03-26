@@ -17,9 +17,15 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { StationRow } from '../components/StationRow';
-import { MAX_SEARCH_RADIUS_KM, MIN_SEARCH_RADIUS_KM } from '../constants/defaults';
+import type { PreviewListItem } from '../components/StationRowPreview';
+import { StationRowPreview } from '../components/StationRowPreview';
+import {
+  MAX_SEARCH_RADIUS_KM,
+  MIN_SEARCH_RADIUS_KM,
+  PREVIEW_MAX_RESULTS,
+} from '../constants/defaults';
 import { theme } from '../constants/theme';
-import { getCneApiToken, getCneStationsUrl, hasCneDataSource } from '../constants/config';
+import { hasCneDataSource } from '../constants/config';
 import { useFuelFilter } from '../hooks/useFuelFilter';
 import { useSearchRadius } from '../hooks/useSearchRadius';
 import { fetchStations } from '../services/cneClient';
@@ -29,6 +35,7 @@ import type { RootStackParamList } from '../types/navigation';
 import { FUEL_FILTER_OPTIONS } from '../types/fuelFilter';
 import type { RankedStation, Station } from '../types/station';
 import { haversineKm } from '../utils/distance';
+import { resolvePriceForFuelFilter } from '../utils/fuelFilter';
 import { rankStationsNearUser } from '../utils/rankStations';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -42,10 +49,16 @@ function debugLog(message: string, payload?: unknown): void {
   console.log(`[home] ${message}`, payload);
 }
 
+function fuelPricesForStation(s: Station): Record<string, number> {
+  if (s.fuelPrices && Object.keys(s.fuelPrices).length > 0) return s.fuelPrices;
+  return s.pricePerLiter > 0 ? { precio: s.pricePerLiter } : {};
+}
+
 export function HomeScreen({ navigation }: Props) {
   const { radiusKm, setRadiusKm, ready: radiusReady } = useSearchRadius();
   const { fuelFilter, setFuelFilter, ready: fuelReady } = useFuelFilter();
-  const [loading, setLoading] = useState(true);
+  const [stationsLoading, setStationsLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [stations, setStations] = useState<Station[]>([]);
   const [userLat, setUserLat] = useState<number | null>(null);
@@ -54,25 +67,48 @@ export function HomeScreen({ navigation }: Props) {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
   const [staleAt, setStaleAt] = useState<number | null>(null);
-  /** Si la petición a la CNE falló y usamos caché, aquí va el mensaje del error (red, token, etc.). */
   const [lastCneFetchError, setLastCneFetchError] = useState<string | null>(null);
   const [radiusInput, setRadiusInput] = useState('');
 
+  const gpsReady = userLat != null && userLon != null;
+
   const ranked = useMemo((): RankedStation[] => {
-    if (userLat == null || userLon == null || stations.length === 0) return [];
-    return rankStationsNearUser(stations, userLat, userLon, radiusKm, fuelFilter).ranked;
-  }, [stations, userLat, userLon, radiusKm, fuelFilter]);
+    if (!gpsReady || stations.length === 0) return [];
+    return rankStationsNearUser(stations, userLat!, userLon!, radiusKm, fuelFilter).ranked;
+  }, [stations, userLat, userLon, radiusKm, fuelFilter, gpsReady]);
+
+  const previewRanked = useMemo((): PreviewListItem[] => {
+    if (stations.length === 0) return [];
+    const rows: PreviewListItem[] = [];
+    for (const s of stations) {
+      const fp = fuelPricesForStation(s);
+      const r = resolvePriceForFuelFilter(fp, fuelFilter);
+      if (r == null) continue;
+      rows.push({
+        ...s,
+        pricePerLiter: r.price,
+        fuelLabel: r.label,
+      });
+    }
+    rows.sort((a, b) => a.pricePerLiter - b.pricePerLiter);
+    return rows.slice(0, PREVIEW_MAX_RESULTS);
+  }, [stations, fuelFilter]);
+
+  const referencePriceForCalculator = useMemo(() => {
+    if (gpsReady) return ranked[0]?.pricePerLiter;
+    return previewRanked[0]?.pricePerLiter;
+  }, [gpsReady, ranked, previewRanked]);
 
   const countStationsInRadius = useMemo(() => {
-    if (userLat == null || userLon == null) return 0;
+    if (!gpsReady) return 0;
     const maxR = Math.min(
       MAX_SEARCH_RADIUS_KM,
       Math.max(MIN_SEARCH_RADIUS_KM, radiusKm),
     );
     return stations.filter(
-      (s) => haversineKm(userLat, userLon, s.latitude, s.longitude) <= maxR,
+      (s) => haversineKm(userLat!, userLon!, s.latitude, s.longitude) <= maxR,
     ).length;
-  }, [stations, userLat, userLon, radiusKm]);
+  }, [stations, userLat, userLon, radiusKm, gpsReady]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -80,7 +116,7 @@ export function HomeScreen({ navigation }: Props) {
         <Pressable
           onPress={() =>
             navigation.navigate('Calculator', {
-              referencePricePerLiter: ranked[0]?.pricePerLiter,
+              referencePricePerLiter: referencePriceForCalculator,
             })
           }
           accessibilityRole="button"
@@ -91,102 +127,131 @@ export function HomeScreen({ navigation }: Props) {
         </Pressable>
       ),
     });
-  }, [navigation, ranked]);
+  }, [navigation, referencePriceForCalculator]);
 
   useEffect(() => {
     setRadiusInput(String(radiusKm));
   }, [radiusKm]);
 
-  const load = useCallback(
-    async (isRefresh: boolean) => {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      setFetchError(null);
-      setLocationError(null);
+  useEffect(() => {
+    if (!radiusReady || !fuelReady) return;
+    let cancelled = false;
 
-      const token = getCneApiToken();
-      const proxyUrl = getCneStationsUrl();
-      debugLog('load:start', {
-        isRefresh,
-        hasToken: token.length > 0,
-        hasProxy: proxyUrl.length > 0,
-      });
+    async function init() {
       if (!hasCneDataSource()) {
-        debugLog('load:missing-cne-source');
+        debugLog('init:missing-cne-source');
         setFetchError(
           'Falta CNE_STATIONS_URL (proxy) o CNE_API_TOKEN en .env — ver .env.example.',
         );
         setStations([]);
-        setLoading(false);
-        setRefreshing(false);
         return;
       }
 
-      try {
-        const [loc, stationsResult] = await Promise.all([
-          getCurrentLocation(),
-          (async () => {
-            try {
-              const list = await fetchStations();
-              await writeStationsCache(list);
-              return { list, stale: false as const, cneFetchError: null as string | null };
-            } catch (e) {
-              const msg = e instanceof Error ? e.message : String(e);
-              debugLog('load:cne-fetch-failed', msg);
-              const cached = await readStationsCache();
-              if (cached) {
-                return {
-                  list: cached.stations,
-                  stale: true as const,
-                  at: cached.fetchedAt,
-                  cneFetchError: msg,
-                };
-              }
-              throw e;
-            }
-          })(),
-        ]);
+      setFetchError(null);
 
-        setStations(stationsResult.list);
-        setStale(stationsResult.stale);
-        setStaleAt(stationsResult.stale ? stationsResult.at : Date.now());
-        setLastCneFetchError(stationsResult.stale ? stationsResult.cneFetchError : null);
-        debugLog('load:stations-result', {
-          count: stationsResult.list.length,
-          stale: stationsResult.stale,
-        });
+      const cached = await readStationsCache();
+      if (cancelled) return;
+      if (cached?.stations.length) {
+        setStations(cached.stations);
+        setStaleAt(cached.fetchedAt);
+        setStale(false);
+        setLastCneFetchError(null);
+      }
+      setStationsLoading(!cached?.stations.length);
 
+      setLocationLoading(true);
+      setLocationError(null);
+      void getCurrentLocation().then((loc) => {
+        if (cancelled) return;
+        setLocationLoading(false);
         if (loc.status === 'ready') {
-          debugLog('load:location-ready', { latitude: loc.latitude, longitude: loc.longitude });
+          debugLog('init:location-ready', { latitude: loc.latitude, longitude: loc.longitude });
           setUserLat(loc.latitude);
           setUserLon(loc.longitude);
         } else {
-          debugLog('load:location-error', loc.message);
+          debugLog('init:location-error', loc.message);
           setUserLat(null);
           setUserLon(null);
           setLocationError(loc.message);
         }
+      });
+
+      try {
+        const list = await fetchStations();
+        if (cancelled) return;
+        await writeStationsCache(list);
+        setStations(list);
+        setStale(false);
+        setStaleAt(Date.now());
+        setLastCneFetchError(null);
+        debugLog('init:stations-ok', { count: list.length });
       } catch (e) {
-        debugLog('load:fetch-error', e instanceof Error ? e.message : String(e));
-        setFetchError(e instanceof Error ? e.message : 'No pudimos cargar los precios.');
-        setStations([]);
+        if (cancelled) return;
+        const msg = e instanceof Error ? e.message : String(e);
+        debugLog('init:cne-fetch-failed', msg);
+        const cached2 = await readStationsCache();
+        if (cached2?.stations.length) {
+          setStations(cached2.stations);
+          setStale(true);
+          setStaleAt(cached2.fetchedAt);
+          setLastCneFetchError(msg);
+        } else {
+          setFetchError(msg);
+          setStations([]);
+        }
       } finally {
-        debugLog('load:end');
-        setLoading(false);
-        setRefreshing(false);
+        if (!cancelled) setStationsLoading(false);
       }
-    },
-    [],
-  );
+    }
 
-  useEffect(() => {
-    if (!radiusReady) return;
-    void load(false);
-  }, [radiusReady, load]);
+    void init();
+    return () => {
+      cancelled = true;
+    };
+  }, [radiusReady, fuelReady]);
 
-  const onRefresh = useCallback(() => {
-    void load(true);
-  }, [load]);
+  const onRefresh = useCallback(async () => {
+    if (!hasCneDataSource()) return;
+    setRefreshing(true);
+    setLocationLoading(true);
+    setLocationError(null);
+
+    const locPromise = getCurrentLocation();
+
+    try {
+      const list = await fetchStations();
+      await writeStationsCache(list);
+      setStations(list);
+      setStale(false);
+      setStaleAt(Date.now());
+      setLastCneFetchError(null);
+      setFetchError(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const cached = await readStationsCache();
+      if (cached?.stations.length) {
+        setStations(cached.stations);
+        setStale(true);
+        setStaleAt(cached.fetchedAt);
+        setLastCneFetchError(msg);
+      } else {
+        setFetchError(msg);
+      }
+    }
+
+    const loc = await locPromise;
+    setLocationLoading(false);
+    if (loc.status === 'ready') {
+      setUserLat(loc.latitude);
+      setUserLon(loc.longitude);
+    } else {
+      setUserLat(null);
+      setUserLon(null);
+      setLocationError(loc.message);
+    }
+
+    setRefreshing(false);
+  }, []);
 
   const applyRadius = useCallback(async () => {
     const n = Number(radiusInput.replace(',', '.'));
@@ -194,10 +259,17 @@ export function HomeScreen({ navigation }: Props) {
     await setRadiusKm(n);
   }, [radiusInput, setRadiusKm]);
 
-  /** La API puede repetir `codigo` en más de una fila; el índice garantiza clave única en la lista. */
-  const keyExtractor = useCallback((item: RankedStation, index: number) => `${item.id}-${index}`, []);
+  const keyExtractorRanked = useCallback(
+    (item: RankedStation, index: number) => `${item.id}-${index}`,
+    [],
+  );
 
-  const renderItem = useCallback(
+  const keyExtractorPreview = useCallback(
+    (item: PreviewListItem, index: number) => `${item.id}-preview-${index}`,
+    [],
+  );
+
+  const renderItemRanked = useCallback(
     ({ item, index }: { item: RankedStation; index: number }) => (
       <StationRow
         item={item}
@@ -208,7 +280,14 @@ export function HomeScreen({ navigation }: Props) {
     [navigation],
   );
 
-  const listHeader = useMemo(() => {
+  const renderItemPreview = useCallback(
+    ({ item, index }: { item: PreviewListItem; index: number }) => (
+      <StationRowPreview item={item} index={index} />
+    ),
+    [],
+  );
+
+  const staleBanner = useMemo(() => {
     if (!stale || staleAt == null) return null;
     const mins = Math.round((Date.now() - staleAt) / 60000);
     const detail = lastCneFetchError?.trim();
@@ -222,19 +301,132 @@ export function HomeScreen({ navigation }: Props) {
     );
   }, [stale, staleAt, lastCneFetchError]);
 
-  if (!radiusReady || !fuelReady || loading) {
+  const progressStage = useMemo(() => {
+    const stationsOk = stations.length > 0 && !stationsLoading;
+    if (stationsOk && !locationLoading && gpsReady) return 2;
+    if (stationsOk && locationLoading) return 1;
+    if (stationsOk && !gpsReady && !locationLoading) return 1;
+    return 0;
+  }, [stations.length, stationsLoading, locationLoading, gpsReady]);
+
+  const loadProgressBanner = useMemo(() => {
+    if (!radiusReady || !fuelReady) return null;
+    if (stations.length === 0) return null;
+    const pct = progressStage >= 2 ? 100 : progressStage >= 1 ? 50 : 0;
+    return (
+      <View style={styles.progressWrap}>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${pct}%` }]} />
+        </View>
+        <Text style={styles.progressHint}>
+          {progressStage >= 2
+            ? 'Listo: precios y ubicación.'
+            : stationsLoading
+              ? 'Descargando precios…'
+              : locationLoading
+                ? 'Buscando ubicación para estimar distancias…'
+                : locationError
+                  ? 'Sin ubicación: mostrando mejores precios (sin distancia).'
+                  : 'Preparando…'}
+        </Text>
+      </View>
+    );
+  }, [
+    radiusReady,
+    fuelReady,
+    stations.length,
+    stationsLoading,
+    locationLoading,
+    locationError,
+    progressStage,
+  ]);
+
+  const emptyMessage = useMemo(() => {
+    if (stations.length === 0) {
+      if (stale && lastCneFetchError) {
+        return `No pudimos contactar a la CNE: ${lastCneFetchError} La caché no tiene estaciones; revisa red y token, o reintenta más tarde.`;
+      }
+      if (stale) {
+        return 'Sin conexión a la CNE y la caché está vacía. Comprueba internet y desliza hacia abajo para reintentar.';
+      }
+      return 'No hay estaciones disponibles con los datos actuales.';
+    }
+    if (gpsReady) {
+      if (countStationsInRadius === 0) {
+        return `No hay estaciones dentro de ${radiusKm} km. Prueba un radio mayor (hasta ${MAX_SEARCH_RADIUS_KM} km).`;
+      }
+      return `Ninguna estación en tu radio publica ${
+        FUEL_FILTER_OPTIONS.find((o) => o.id === fuelFilter)?.label ?? 'ese combustible'
+      }. Prueba otro tipo de combustible o aumenta el radio.`;
+    }
+    if (previewRanked.length === 0) {
+      return `Ninguna estación publica ${
+        FUEL_FILTER_OPTIONS.find((o) => o.id === fuelFilter)?.label ?? 'ese combustible'
+      } en los datos actuales. Prueba otro tipo de combustible.`;
+    }
+    return '';
+  }, [
+    stations.length,
+    stale,
+    lastCneFetchError,
+    gpsReady,
+    countStationsInRadius,
+    radiusKm,
+    fuelFilter,
+    previewRanked.length,
+  ]);
+
+  const showEmpty =
+    (stations.length === 0 && !stationsLoading) ||
+    (gpsReady && ranked.length === 0 && stations.length > 0) ||
+    (!gpsReady && previewRanked.length === 0 && stations.length > 0);
+
+  const showRankedList = gpsReady && ranked.length > 0;
+  const showPreviewList = !gpsReady && previewRanked.length > 0;
+
+  const showFullScreenLoading =
+    !radiusReady || !fuelReady || (stations.length === 0 && stationsLoading && !fetchError);
+
+  if (showFullScreenLoading) {
     return (
       <SafeAreaView style={styles.safe} edges={['left', 'right']}>
-        <LoadingState message="Obteniendo ubicación y precios…" />
+        <LoadingState
+          message={
+            stationsLoading
+              ? 'Cargando precios desde la CNE…'
+              : 'Preparando la app…'
+          }
+        />
       </SafeAreaView>
     );
   }
 
-  if (fetchError) {
+  if (fetchError && stations.length === 0) {
     return (
       <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
         <ErrorState title="No se pudieron cargar datos" message={fetchError} />
-        <Pressable style={styles.retry} onPress={() => void load(false)}>
+        <Pressable
+          style={styles.retry}
+          onPress={() => {
+            setFetchError(null);
+            setStationsLoading(true);
+            void (async () => {
+              try {
+                const list = await fetchStations();
+                await writeStationsCache(list);
+                setStations(list);
+                setStale(false);
+                setStaleAt(Date.now());
+                setLastCneFetchError(null);
+                setFetchError(null);
+              } catch (e) {
+                setFetchError(e instanceof Error ? e.message : 'No pudimos cargar los precios.');
+              } finally {
+                setStationsLoading(false);
+              }
+            })();
+          }}
+        >
           <Text style={styles.retryText}>Reintentar</Text>
         </Pressable>
         <AdBanner />
@@ -283,41 +475,51 @@ export function HomeScreen({ navigation }: Props) {
         </ScrollView>
       </View>
 
-      {locationError ? (
-        <ErrorState title="Ubicación" message={locationError} />
+      {loadProgressBanner}
+
+      {locationError && stations.length > 0 ? (
+        <View style={styles.locationBanner}>
+          <Text style={styles.locationBannerText}>{locationError}</Text>
+        </View>
       ) : null}
 
-      {listHeader}
+      {staleBanner}
 
-      {!locationError && !loading && ranked.length === 0 ? (
-        <EmptyState
-          message={
-            stations.length === 0
-              ? stale && lastCneFetchError
-                ? `No pudimos contactar a la CNE: ${lastCneFetchError} La caché no tiene estaciones; revisa red y token, o reintenta más tarde.`
-                : stale
-                  ? 'Sin conexión a la CNE y la caché está vacía. Comprueba internet y desliza hacia abajo para reintentar.'
-                  : 'No hay estaciones disponibles con los datos actuales.'
-              : countStationsInRadius === 0
-                ? `No hay estaciones dentro de ${radiusKm} km. Prueba un radio mayor (hasta ${MAX_SEARCH_RADIUS_KM} km).`
-                : `Ninguna estación en tu radio publica ${
-                    FUEL_FILTER_OPTIONS.find((o) => o.id === fuelFilter)?.label ?? 'ese combustible'
-                  }. Prueba otro tipo de combustible o aumenta el radio.`
-          }
-        />
-      ) : null}
+      {showEmpty ? <EmptyState message={emptyMessage} /> : null}
 
-      {!locationError && ranked.length > 0 ? (
+      {showRankedList ? (
         <FlatList
           style={styles.list}
           data={ranked}
-          keyExtractor={keyExtractor}
-          renderItem={renderItem}
+          keyExtractor={keyExtractorRanked}
+          renderItem={renderItemRanked}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           contentContainerStyle={styles.listContent}
           initialNumToRender={12}
           windowSize={5}
           removeClippedSubviews
+        />
+      ) : null}
+
+      {showPreviewList ? (
+        <FlatList
+          style={styles.list}
+          data={previewRanked}
+          keyExtractor={keyExtractorPreview}
+          renderItem={renderItemPreview}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={styles.listContent}
+          initialNumToRender={12}
+          windowSize={5}
+          removeClippedSubviews
+          ListHeaderComponent={
+            !gpsReady && previewRanked.length > 0 ? (
+              <Text style={styles.previewListHint}>
+                Orden por menor precio del combustible elegido. Activa ubicación para distancias y
+                detalle.
+              </Text>
+            ) : null
+          }
         />
       ) : null}
 
@@ -337,12 +539,6 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.border,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: theme.colors.text,
-    marginBottom: 10,
   },
   label: {
     fontSize: 14,
@@ -373,11 +569,6 @@ const styles = StyleSheet.create({
   applyBtnText: {
     color: theme.colors.surface,
     fontWeight: '600',
-  },
-  hint: {
-    marginTop: 8,
-    fontSize: 12,
-    color: theme.colors.muted2,
   },
   chipsScroll: {
     marginTop: 4,
@@ -411,6 +602,49 @@ const styles = StyleSheet.create({
   chipTextSelected: {
     color: theme.colors.primary,
     fontWeight: '600',
+  },
+  progressWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
+    gap: 6,
+  },
+  progressTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.surface2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+    borderRadius: 2,
+  },
+  progressHint: {
+    fontSize: 12,
+    color: theme.colors.muted2,
+  },
+  locationBanner: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#FDE68A',
+  },
+  locationBannerText: {
+    fontSize: 13,
+    color: theme.colors.text,
+    lineHeight: 18,
+  },
+  previewListHint: {
+    fontSize: 13,
+    color: theme.colors.muted2,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+    lineHeight: 18,
   },
   staleBanner: {
     backgroundColor: '#EFF6FF',

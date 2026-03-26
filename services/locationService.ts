@@ -8,7 +8,7 @@ export type LocationResult =
   | { status: 'error'; message: string };
 
 const EMULATOR_HINT =
-  'Emulador: ⋯ Extended controls → Location → GPS ON → SET LOCATION; luego refresca. Si sigue igual: `adb emu geo fix <longitud> <latitud>` (ej. adb emu geo fix -70.593 -33.455).';
+  'Emulador: AVD con Google Play; Ajustes → Ubicación en Alta precisión; Extended controls → Location → punto en el mapa. Comando: adb emu geo fix <longitud> <latitud> (ej. -70.593 -33.455 para Santiago). Si el fix no calza, prueba invertir el orden de los dos números en tu versión del emulador.';
 
 function debugLog(message: string, payload?: unknown): void {
   if (!__DEV__) return;
@@ -74,6 +74,31 @@ async function resolveCoordinates(): Promise<{ latitude: number; longitude: numb
   return null;
 }
 
+/**
+ * En Android (sobre todo AVD), `getCurrentPositionAsync` puede fallar o demorar mientras que
+ * `watchPositionAsync` recibe el mock de `adb emu geo fix` antes. Tomamos la primera coordenada válida.
+ */
+async function firstFixAndroidOrNull(
+  resolvePromise: Promise<{ latitude: number; longitude: number } | null>,
+  watchPromise: Promise<{ latitude: number; longitude: number } | null>,
+): Promise<{ latitude: number; longitude: number } | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (c: { latitude: number; longitude: number } | null) => {
+      if (settled) return;
+      if (c != null) {
+        settled = true;
+        resolve(c);
+      }
+    };
+    void resolvePromise.then(done);
+    void watchPromise.then(done);
+    void Promise.allSettled([resolvePromise, watchPromise]).then(() => {
+      if (!settled) resolve(null);
+    });
+  });
+}
+
 /** En algunos AVD, getCurrentPositionAsync falla pero el primer update de watch sí llega. */
 async function watchFirstFix(timeoutMs: number): Promise<{ latitude: number; longitude: number } | null> {
   let resolveFirst!: (value: { latitude: number; longitude: number }) => void;
@@ -87,6 +112,8 @@ async function watchFirstFix(timeoutMs: number): Promise<{ latitude: number; lon
       accuracy: Accuracy.Lowest,
       mayShowUserSettingsDialog: false,
       timeInterval: 500,
+      /** Sin esto, algunos AVD no emiten hasta “moverse” lo bastante. */
+      distanceInterval: 0,
     },
     (pos) => {
       if (firstConsumed) return;
@@ -159,11 +186,23 @@ export async function getCurrentLocation(): Promise<LocationResult> {
   }
 
   try {
-    let coords = await resolveCoordinates();
-    if (!coords) {
-      debugLog('Trying watchFirstFix (15s)');
-      coords = await watchFirstFix(15_000);
+    let coords: { latitude: number; longitude: number } | null = null;
+
+    if (Platform.OS === 'android') {
+      debugLog('Android: racing resolveCoordinates vs watchFirstFix (20s)');
+      coords = await firstFixAndroidOrNull(resolveCoordinates(), watchFirstFix(20_000));
+      if (!coords) {
+        debugLog('Android race returned null; retry watchFirstFix (15s) alone');
+        coords = await watchFirstFix(15_000);
+      }
+    } else {
+      coords = await resolveCoordinates();
+      if (!coords) {
+        debugLog('Trying watchFirstFix (15s)');
+        coords = await watchFirstFix(15_000);
+      }
     }
+
     if (coords) {
       debugLog('Resolved coordinates', coords);
       return { status: 'ready', ...coords };
