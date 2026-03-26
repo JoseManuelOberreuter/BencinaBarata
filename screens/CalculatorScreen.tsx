@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { RootStackParamList } from '../types/navigation';
 import { formatCLP } from '../utils/format';
+import { theme } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Calculator'>;
 
@@ -133,7 +134,7 @@ export function CalculatorScreen({ route }: Props) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   scroll: {
     flex: 1,
@@ -147,19 +148,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     padding: 14,
     borderRadius: 12,
-    backgroundColor: '#f0f6fc',
+    backgroundColor: '#EFF6FF',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#d4e5f7',
+    borderColor: '#BFDBFE',
   },
   introTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0b5cab',
+    color: theme.colors.primary,
     marginBottom: 8,
   },
   introBody: {
     fontSize: 14,
-    color: '#444',
+    color: theme.colors.muted,
     lineHeight: 20,
   },
   form: {
@@ -171,12 +172,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     fontWeight: '600',
-    color: '#222',
+    color: theme.colors.text,
   },
   input: {
     marginTop: 6,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -184,36 +185,36 @@ const styles = StyleSheet.create({
   },
   error: {
     marginTop: 12,
-    color: '#a40000',
+    color: theme.colors.danger,
     fontSize: 14,
   },
   results: {
     marginTop: 20,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#f6f7f9',
+    backgroundColor: theme.colors.surface2,
     gap: 8,
   },
   resultLine: {
     fontSize: 15,
-    color: '#333',
+    color: theme.colors.text,
   },
   resultHighlight: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#111',
+    color: theme.colors.text,
   },
   note: {
     marginTop: 16,
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.muted2,
   },
   linkBtn: {
     marginTop: 12,
     alignSelf: 'flex-start',
   },
   linkText: {
-    color: '#0b5cab',
+    color: theme.colors.primary,
     fontWeight: '600',
     fontSize: 14,
   },

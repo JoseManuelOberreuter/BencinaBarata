@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { theme } from '../constants/theme';
+
 export function EmptyState({ message }: { message: string }) {
   return (
     <View style={styles.wrap}>
@@ -14,7 +16,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 15,
-    color: '#555',
+    color: theme.colors.muted,
     textAlign: 'center',
   },
 });

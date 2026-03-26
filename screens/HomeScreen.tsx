@@ -18,6 +18,7 @@ import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { StationRow } from '../components/StationRow';
 import { MAX_SEARCH_RADIUS_KM, MIN_SEARCH_RADIUS_KM } from '../constants/defaults';
+import { theme } from '../constants/theme';
 import { getCneApiToken, getCneStationsUrl, hasCneDataSource } from '../constants/config';
 import { useFuelFilter } from '../hooks/useFuelFilter';
 import { useSearchRadius } from '../hooks/useSearchRadius';
@@ -328,25 +329,25 @@ export function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   controls: {
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e1e4e8',
+    borderBottomColor: theme.colors.border,
   },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111',
+    color: theme.colors.text,
     marginBottom: 10,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#222',
+    color: theme.colors.text,
     marginBottom: 6,
   },
   row: {
@@ -357,26 +358,26 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
   },
   applyBtn: {
-    backgroundColor: '#0b5cab',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 8,
   },
   applyBtnText: {
-    color: '#fff',
+    color: theme.colors.surface,
     fontWeight: '600',
   },
   hint: {
     marginTop: 8,
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.muted2,
   },
   chipsScroll: {
     marginTop: 4,
@@ -394,32 +395,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#eef1f4',
+    backgroundColor: theme.colors.surface2,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#d8dde2',
+    borderColor: theme.colors.border,
   },
   chipSelected: {
-    backgroundColor: '#e6f4fe',
-    borderColor: '#0b5cab',
+    backgroundColor: theme.colors.primaryTint,
+    borderColor: theme.colors.primary,
   },
   chipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: theme.colors.text,
   },
   chipTextSelected: {
-    color: '#0b5cab',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   staleBanner: {
-    backgroundColor: '#fff8e6',
+    backgroundColor: '#EFF6FF',
     padding: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#f0e0b2',
+    borderBottomColor: '#BFDBFE',
   },
   staleText: {
     fontSize: 13,
-    color: '#6a4b00',
+    color: theme.colors.primaryDark,
     textAlign: 'center',
   },
   list: {
@@ -435,20 +436,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   headerBtnText: {
-    color: '#0b5cab',
+    color: theme.colors.primary,
     fontWeight: '600',
     fontSize: 16,
   },
   retry: {
     margin: 16,
     alignSelf: 'center',
-    backgroundColor: '#0b5cab',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryText: {
-    color: '#fff',
+    color: theme.colors.surface,
     fontWeight: '600',
   },
 });

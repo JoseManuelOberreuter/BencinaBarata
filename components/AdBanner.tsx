@@ -2,6 +2,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 
 import { getAdMobBannerUnitId } from '../constants/config';
+import { theme } from '../constants/theme';
 
 function resolveUnitId(): string {
   if (__DEV__) return TestIds.BANNER;
@@ -28,8 +29,8 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
     paddingVertical: 8,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#e1e4e8',
+    borderTopColor: theme.colors.border,
   },
 });

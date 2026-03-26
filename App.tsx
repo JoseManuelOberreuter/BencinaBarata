@@ -8,16 +8,20 @@ import mobileAds from 'react-native-google-mobile-ads';
 import { CalculatorScreen } from './screens/CalculatorScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { StationDetailScreen } from './screens/StationDetailScreen';
+import { BrandHeaderTitle } from './components/BrandHeaderTitle';
 import type { RootStackParamList } from './types/navigation';
+import { theme } from './constants/theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const theme = {
+const appTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    background: '#ffffff',
-    primary: '#0b5cab',
+    background: theme.colors.background,
+    primary: theme.colors.primary,
+    text: theme.colors.text,
+    card: theme.colors.surface,
   },
 };
 
@@ -30,15 +34,19 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer theme={theme}>
+      <NavigationContainer theme={appTheme}>
         <Stack.Navigator
           initialRouteName="Home"
           screenOptions={{
             headerShadowVisible: false,
-            headerTitleStyle: { fontWeight: '600' },
+            headerTitleStyle: { fontWeight: '600', color: theme.colors.text },
           }}
         >
-          <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'BencinaBarata' }} />
+          <Stack.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{ headerTitle: () => <BrandHeaderTitle /> }}
+          />
           <Stack.Screen
             name="Calculator"
             component={CalculatorScreen}

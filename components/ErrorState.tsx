@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { theme } from '../constants/theme';
+
 export function ErrorState({ title, message }: { title: string; message: string }) {
   return (
     <View style={styles.wrap} accessibilityRole="alert">
@@ -17,11 +19,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#111',
+    color: theme.colors.text,
   },
   message: {
     fontSize: 15,
-    color: '#444',
+    color: theme.colors.muted2,
     lineHeight: 22,
   },
 });

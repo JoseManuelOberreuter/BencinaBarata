@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../types/navigation';
 import { formatCLP, formatKm } from '../utils/format';
 import { colorForVsAverage } from '../utils/priceVsAverage';
+import { theme } from '../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'StationDetail'>;
 
@@ -99,7 +100,7 @@ export function StationDetailScreen({ route }: Props) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   scroll: {
     paddingHorizontal: 20,
@@ -115,35 +116,35 @@ const styles = StyleSheet.create({
     marginBottom: 22,
     paddingBottom: 18,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e1e4e8',
+    borderBottomColor: theme.colors.border,
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0b5cab',
+    color: theme.colors.primary,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
     marginBottom: 8,
   },
   body: {
     fontSize: 16,
-    color: '#222',
+    color: theme.colors.text,
     lineHeight: 22,
   },
   sub: {
     marginTop: 6,
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.muted2,
   },
   muted: {
     fontSize: 15,
-    color: '#888',
+    color: theme.colors.muted2,
     fontStyle: 'italic',
   },
   mapBtn: {
     alignSelf: 'flex-start',
     marginTop: 12,
-    backgroundColor: '#0b5cab',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
@@ -159,12 +160,12 @@ const styles = StyleSheet.create({
   priceBig: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111',
+    color: theme.colors.text,
   },
   meta: {
     marginTop: 6,
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.muted2,
   },
   saving: {
     marginTop: 10,
@@ -177,15 +178,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.colors.border,
   },
   fuelKey: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.text,
   },
   fuelVal: {
     fontSize: 16,
-    color: '#111',
+    color: theme.colors.text,
   },
 });

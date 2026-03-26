@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { RankedStation } from '../types/station';
 import { formatCLP, formatKm } from '../utils/format';
 import { colorForVsAverage } from '../utils/priceVsAverage';
+import { theme } from '../constants/theme';
 
 type Props = {
   item: RankedStation;
@@ -76,13 +77,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 10,
     borderRadius: 12,
-    backgroundColor: '#f6f7f9',
+    backgroundColor: theme.colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#e1e4e8',
+    borderColor: theme.colors.border,
   },
   cardPressed: {
     opacity: 0.92,
-    backgroundColor: '#eef1f4',
+    backgroundColor: theme.colors.surface2,
   },
   titleRow: {
     flexDirection: 'row',
@@ -97,8 +98,8 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 6,
     overflow: 'hidden',
-    backgroundColor: '#e6f4fe',
-    color: '#0b5cab',
+    backgroundColor: theme.colors.primaryTint,
+    color: theme.colors.primary,
     fontWeight: '600',
     fontSize: 11,
   },
@@ -108,26 +109,26 @@ const styles = StyleSheet.create({
     minWidth: 0,
     fontSize: 16,
     fontWeight: '600',
-    color: '#111',
+    color: theme.colors.text,
     lineHeight: 21,
   },
   distance: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#555',
+    color: theme.colors.muted,
     marginTop: 1,
   },
   address: {
     marginTop: 6,
     fontSize: 13,
-    color: '#555',
+    color: theme.colors.muted,
     lineHeight: 18,
   },
   priceLine: {
     marginTop: 8,
     fontSize: 17,
     fontWeight: '700',
-    color: '#111',
+    color: theme.colors.text,
     letterSpacing: -0.2,
   },
   saving: {
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
   tapHint: {
     marginTop: 6,
     fontSize: 11,
-    color: '#0b5cab',
+    color: theme.colors.primary,
     fontWeight: '500',
   },
 });

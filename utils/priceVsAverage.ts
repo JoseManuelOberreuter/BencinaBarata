@@ -3,7 +3,7 @@
  * > 0: más barato que el promedio · < 0: más caro
  */
 export function colorForVsAverage(savingVsAveragePerLiter: number): string {
-  if (savingVsAveragePerLiter > 0) return '#15803d';
-  if (savingVsAveragePerLiter < 0) return '#b91c1c';
-  return '#555';
+  if (savingVsAveragePerLiter > 0) return '#22C55E';
+  if (savingVsAveragePerLiter < 0) return '#EF4444';
+  return '#64748B';
 }
