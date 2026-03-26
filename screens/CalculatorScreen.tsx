@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { RootStackParamList } from '../types/navigation';
@@ -54,7 +54,21 @@ export function CalculatorScreen({ route }: Props) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
-      <View style={styles.form}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.intro}>
+          <Text style={styles.introTitle}>Calcula tu gasto en combustible</Text>
+          <Text style={styles.introBody}>
+            Indica el rendimiento de tu auto (km por litro), cuántos kilómetros sueles recorrer al día y
+            el precio por litro. Te mostramos cuántos litros gastas al día y un estimado del gasto diario y
+            mensual (30 días).
+          </Text>
+        </View>
+
+        <View style={styles.form}>
         <Text style={styles.label}>Consumo (km/L)</Text>
         <TextInput
           value={kmPerLiter}
@@ -110,7 +124,8 @@ export function CalculatorScreen({ route }: Props) {
             <Text style={styles.linkText}>Usar precio de la mejor opción ({formatCLP(refPrice)}/L)</Text>
           </Pressable>
         ) : null}
-      </View>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -120,8 +135,36 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  intro: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#f0f6fc',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#d4e5f7',
+  },
+  introTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0b5cab',
+    marginBottom: 8,
+  },
+  introBody: {
+    fontSize: 14,
+    color: '#444',
+    lineHeight: 20,
+  },
   form: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     gap: 4,
   },
   label: {

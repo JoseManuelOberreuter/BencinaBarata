@@ -8,9 +8,18 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "CNE_STATIONS_URL": "https://bencinabarata-cne-proxy.bencinabarata.workers.dev",
+        "CNE_API_TOKEN": ""
+      }
     },
-    "production": {}
+    "production": {
+      "env": {
+        "CNE_STATIONS_URL": "https://bencinabarata-cne-proxy.bencinabarata.workers.dev",
+        "CNE_API_TOKEN": ""
+      }
+    }
   },
   "submit": {
     "production": {}

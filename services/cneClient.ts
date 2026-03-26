@@ -19,6 +19,47 @@ function parseNumber(v: unknown): number | null {
   return null;
 }
 
+function pickTrimmedString(...candidates: unknown[]): string | undefined {
+  for (const v of candidates) {
+    if (typeof v === 'string') {
+      const t = v.trim();
+      if (t) return t;
+    }
+  }
+  return undefined;
+}
+
+/** Dirección y ubicación según campos habituales de la API CNE v4. */
+function readAddressFields(
+  o: Record<string, unknown>,
+  ub: Record<string, unknown> | null,
+): { addressLine?: string; comuna?: string; region?: string } {
+  const direct = pickTrimmedString(
+    ub?.direccion,
+    o.direccion,
+    o.direccion_fiscal,
+    o.direccion_comercial,
+  );
+  let addressLine = direct;
+  if (!addressLine && ub) {
+    const calle = pickTrimmedString(ub.calle);
+    const numero = pickTrimmedString(ub.numero);
+    if (calle && numero) addressLine = `${calle} ${numero}`;
+    else if (calle) addressLine = calle;
+  }
+  const comuna = pickTrimmedString(ub?.nombre_comuna, o.nombre_comuna, o.comuna);
+  const region = pickTrimmedString(
+    ub?.nombre_region,
+    o.nombre_region,
+    typeof o.region === 'string' ? o.region : undefined,
+  );
+  return {
+    addressLine: addressLine || undefined,
+    comuna: comuna || undefined,
+    region: region || undefined,
+  };
+}
+
 const ARRAY_KEYS = [
   'features', // GeoJSON FeatureCollection
   'data',
@@ -271,12 +312,14 @@ function normalizeStation(raw: unknown, index: number): Station | null {
       : null;
   const marca =
     distribuidor && typeof distribuidor.marca === 'string' ? distribuidor.marca.trim() : '';
-  const comuna =
+  const comunaNombre =
     ub && typeof ub.nombre_comuna === 'string' ? ub.nombre_comuna.trim() : '';
 
-  /** Marca (COPEC, Shell, …) es lo que el usuario reconoce; `razon_social` es la razón legal. */
+  const { addressLine, comuna: addrComuna, region } = readAddressFields(o, ub);
+
+  /** Marca (COPEC, Shell, …); si no hay marca, se usan otros campos de la fila. */
   const name =
-    (marca && (comuna ? `${marca} · ${comuna}` : marca)) ||
+    (marca && (comunaNombre ? `${marca} · ${comunaNombre}` : marca)) ||
     (typeof o.nombre === 'string' && o.nombre.trim()) ||
     (typeof o.nombreFantasia === 'string' && o.nombreFantasia.trim()) ||
     (typeof o.razon_social === 'string' && o.razon_social.trim()) ||
@@ -284,6 +327,8 @@ function normalizeStation(raw: unknown, index: number): Station | null {
     (typeof o.direccion === 'string' && o.direccion.trim()) ||
     (ub && typeof ub.direccion === 'string' && ub.direccion.trim()) ||
     'Estación de servicio';
+
+  const comuna = addrComuna ?? comunaNombre;
 
   return {
     id,
@@ -293,6 +338,9 @@ function normalizeStation(raw: unknown, index: number): Station | null {
     pricePerLiter: priceInfo.price,
     fuelLabel: priceInfo.label,
     fuelPrices,
+    addressLine,
+    comuna,
+    region,
   };
 }
 

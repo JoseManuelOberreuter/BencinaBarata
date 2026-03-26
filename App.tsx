@@ -5,8 +5,9 @@ import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import mobileAds from 'react-native-google-mobile-ads';
 
-import { HomeScreen } from './screens/HomeScreen';
 import { CalculatorScreen } from './screens/CalculatorScreen';
+import { HomeScreen } from './screens/HomeScreen';
+import { StationDetailScreen } from './screens/StationDetailScreen';
 import type { RootStackParamList } from './types/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -42,6 +43,11 @@ export default function App() {
             name="Calculator"
             component={CalculatorScreen}
             options={{ title: 'Calculadora de gasto' }}
+          />
+          <Stack.Screen
+            name="StationDetail"
+            component={StationDetailScreen}
+            options={{ title: 'Detalle' }}
           />
         </Stack.Navigator>
       </NavigationContainer>

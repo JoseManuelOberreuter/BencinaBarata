@@ -8,6 +8,10 @@ export interface Station {
   fuelLabel?: string;
   /** Precios por clave de producto según la CNE (ej. 93, 95, 97, DI, GLP). */
   fuelPrices: Record<string, number>;
+  /** Calle / número según la CNE (`ubicacion.direccion` u homólogos). */
+  addressLine?: string;
+  comuna?: string;
+  region?: string;
 }
 
 export interface RankedStation extends Station {

@@ -198,9 +198,13 @@ export function HomeScreen({ navigation }: Props) {
 
   const renderItem = useCallback(
     ({ item, index }: { item: RankedStation; index: number }) => (
-      <StationRow item={item} index={index} />
+      <StationRow
+        item={item}
+        index={index}
+        onPress={() => navigation.navigate('StationDetail', { station: item })}
+      />
     ),
-    [],
+    [navigation],
   );
 
   const listHeader = useMemo(() => {
@@ -276,9 +280,6 @@ export function HomeScreen({ navigation }: Props) {
             );
           })}
         </ScrollView>
-        <Text style={styles.hint}>
-          Lista ordenada de más barata a más cara ({radiusKm} km, máx. {MAX_SEARCH_RADIUS_KM} km).
-        </Text>
       </View>
 
       {locationError ? (
