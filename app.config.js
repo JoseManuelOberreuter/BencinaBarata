@@ -5,6 +5,11 @@
  */
 require('dotenv').config();
 
+/** EAS no enlaza si `extra.eas.projectId` está vacío; `.env` con `EAS_PROJECT_ID=` debe ignorarse. */
+const easProjectId =
+  (process.env.EAS_PROJECT_ID && process.env.EAS_PROJECT_ID.trim()) ||
+  '81feaddf-1973-425e-ac55-3cc0553ab2d0';
+
 const androidAdMobAppId =
   (process.env.ADMOB_ANDROID_APP_ID || '').trim() ||
   'ca-app-pub-3940256099942544~3347511713';
@@ -70,7 +75,7 @@ module.exports = {
       admobBannerAndroid: process.env.ADMOB_BANNER_ANDROID_ID,
       admobBannerIos: process.env.ADMOB_BANNER_IOS_ID,
       eas: {
-        projectId: process.env.EAS_PROJECT_ID,
+        projectId: easProjectId,
       },
     },
   },
