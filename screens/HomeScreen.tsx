@@ -1,5 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import Constants from 'expo-constants';
 import {
   FlatList,
   Pressable,
@@ -55,6 +56,7 @@ function fuelPricesForStation(s: Station): Record<string, number> {
 }
 
 export function HomeScreen({ navigation }: Props) {
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   const { radiusKm, setRadiusKm, ready: radiusReady } = useSearchRadius();
   const { fuelFilter, setFuelFilter, ready: fuelReady } = useFuelFilter();
   const [stationsLoading, setStationsLoading] = useState(false);
@@ -523,6 +525,7 @@ export function HomeScreen({ navigation }: Props) {
         />
       ) : null}
 
+      <Text style={styles.versionTag}>v{appVersion}</Text>
       <AdBanner />
     </SafeAreaView>
   );
@@ -685,5 +688,12 @@ const styles = StyleSheet.create({
   retryText: {
     color: theme.colors.surface,
     fontWeight: '600',
+  },
+  versionTag: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    fontSize: 10,
+    color: theme.colors.muted2,
   },
 });
