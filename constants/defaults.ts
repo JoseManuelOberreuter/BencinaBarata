@@ -13,9 +13,19 @@ export const PREVIEW_MAX_RESULTS = 20;
 export const DEFAULT_SCORE_FACTOR = 12;
 
 export const STORAGE_KEYS = {
+  searchRadiusKm: '@bencina-app/search_radius_km',
+  fuelFilter: '@bencina-app/fuel_filter',
+  /** Antiguo factor de score; ya no se usa en la UI. */
+  scoreFactor: '@bencina-app/score_factor',
+  stationsCache: '@bencina-app/stations_cache_v1',
+  stationsCacheTs: '@bencina-app/stations_cache_ts_v1',
+  /** Primera aceptación de términos y condiciones. */
+  termsAccepted: '@bencina-app/terms_accepted_v1',
+} as const;
+
+export const LEGACY_STORAGE_KEYS = {
   searchRadiusKm: '@bencinabarata/search_radius_km',
   fuelFilter: '@bencinabarata/fuel_filter',
-  /** Antiguo factor de score; ya no se usa en la UI. */
   scoreFactor: '@bencinabarata/score_factor',
   stationsCache: '@bencinabarata/stations_cache_v1',
   stationsCacheTs: '@bencinabarata/stations_cache_ts_v1',

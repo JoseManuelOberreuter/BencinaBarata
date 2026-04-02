@@ -1,12 +1,13 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
 import {
   DEFAULT_SEARCH_RADIUS_KM,
+  LEGACY_STORAGE_KEYS,
   MAX_SEARCH_RADIUS_KM,
   MIN_SEARCH_RADIUS_KM,
   STORAGE_KEYS,
 } from '../constants/defaults';
+import { getStoredValue, setStoredValue } from '../utils/storage';
 
 function clampRadius(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_SEARCH_RADIUS_KM;
@@ -20,7 +21,10 @@ export function useSearchRadius() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const raw = await AsyncStorage.getItem(STORAGE_KEYS.searchRadiusKm);
+      const raw = await getStoredValue(
+        STORAGE_KEYS.searchRadiusKm,
+        LEGACY_STORAGE_KEYS.searchRadiusKm
+      );
       const n = raw != null ? Number(raw.replace(',', '.')) : NaN;
       if (!cancelled && Number.isFinite(n)) {
         setRadiusKmState(clampRadius(n));
@@ -35,7 +39,11 @@ export function useSearchRadius() {
   const setRadiusKm = useCallback(async (value: number) => {
     const next = clampRadius(value);
     setRadiusKmState(next);
-    await AsyncStorage.setItem(STORAGE_KEYS.searchRadiusKm, String(next));
+    await setStoredValue(
+      STORAGE_KEYS.searchRadiusKm,
+      String(next),
+      LEGACY_STORAGE_KEYS.searchRadiusKm
+    );
   }, []);
 
   return { radiusKm, setRadiusKm, ready };

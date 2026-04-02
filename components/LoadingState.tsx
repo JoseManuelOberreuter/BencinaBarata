@@ -7,7 +7,7 @@ const LOGO_SOURCE = require('../assets/bencina_barata_logo_sin_fondo.png');
 export function LoadingState({ message = 'Cargando…' }: { message?: string }) {
   return (
     <View style={styles.wrap} accessibilityRole="progressbar">
-      <Image source={LOGO_SOURCE} style={styles.logo} accessibilityLabel="Logo BencinaBarata" />
+      <Image source={LOGO_SOURCE} style={styles.logo} accessibilityLabel="Logo Bencina App" />
       <ActivityIndicator size="large" />
       <Text style={styles.text}>{message}</Text>
     </View>

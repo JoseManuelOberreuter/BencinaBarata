@@ -19,9 +19,9 @@ const iosAdMobAppId =
 
 module.exports = {
   expo: {
-    name: 'BencinaBarata',
-    slug: 'BencinaBarata',
-    version: '1.0.1',
+    name: 'Bencina App',
+    slug: 'bencina-app',
+    version: '1.0.2',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
@@ -45,6 +45,7 @@ module.exports = {
         backgroundImage: './assets/android-icon-background.png',
         monochromeImage: './assets/android-icon-monochrome.png',
       },
+      versionCode: 3,
       predictiveBackGestureEnabled: false,
       package: 'com.bencinabarata.app',
       permissions: ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION'],

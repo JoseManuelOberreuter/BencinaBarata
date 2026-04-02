@@ -1,4 +1,4 @@
-# BencinaBarata
+# Bencina App
 
 App móvil (Expo / React Native) para comparar bencineras en Chile usando la API oficial de la Comisión Nacional de Energía (CNE), con puntaje que combina **precio** y **distancia**, calculadora de gasto y banner AdMob.
 
