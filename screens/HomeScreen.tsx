@@ -1,8 +1,10 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Constants from 'expo-constants';
 import {
+  Alert,
   FlatList,
+  Keyboard,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -36,6 +38,7 @@ import type { RootStackParamList } from '../types/navigation';
 import { FUEL_FILTER_OPTIONS } from '../types/fuelFilter';
 import type { RankedStation, Station } from '../types/station';
 import { haversineKm } from '../utils/distance';
+import { parseRadiusKmFromInput } from '../utils/radiusInput';
 import { resolvePriceForFuelFilter } from '../utils/fuelFilter';
 import { rankStationsNearUser } from '../utils/rankStations';
 
@@ -71,6 +74,11 @@ export function HomeScreen({ navigation }: Props) {
   const [staleAt, setStaleAt] = useState<number | null>(null);
   const [lastCneFetchError, setLastCneFetchError] = useState<string | null>(null);
   const [radiusInput, setRadiusInput] = useState('');
+  const radiusFieldRef = useRef<TextInput>(null);
+  const [loadBannerDismissed, setLoadBannerDismissed] = useState(false);
+  const [loadBannerSuccess, setLoadBannerSuccess] = useState(false);
+  const loadBannerSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadBannerCycleDoneRef = useRef(false);
 
   const gpsReady = userLat != null && userLon != null;
 
@@ -256,8 +264,24 @@ export function HomeScreen({ navigation }: Props) {
   }, []);
 
   const applyRadius = useCallback(async () => {
-    const n = Number(radiusInput.replace(',', '.'));
-    if (!Number.isFinite(n) || n <= 0) return;
+    radiusFieldRef.current?.blur();
+    Keyboard.dismiss();
+    const n = parseRadiusKmFromInput(radiusInput);
+    if (n == null) {
+      Alert.alert(
+        'Radio no válido',
+        `Escribe un número entre ${MIN_SEARCH_RADIUS_KM} y ${MAX_SEARCH_RADIUS_KM} km.`,
+      );
+      return;
+    }
+    if (n < MIN_SEARCH_RADIUS_KM || n > MAX_SEARCH_RADIUS_KM) {
+      Alert.alert(
+        'Radio ajustado',
+        n < MIN_SEARCH_RADIUS_KM
+          ? `El mínimo es ${MIN_SEARCH_RADIUS_KM} km.`
+          : `El máximo es ${MAX_SEARCH_RADIUS_KM} km; se aplicará ese límite.`,
+      );
+    }
     await setRadiusKm(n);
   }, [radiusInput, setRadiusKm]);
 
@@ -311,9 +335,78 @@ export function HomeScreen({ navigation }: Props) {
     return 0;
   }, [stations.length, stationsLoading, locationLoading, gpsReady]);
 
+  useEffect(() => {
+    if (!stationsLoading && !locationLoading) return;
+    loadBannerCycleDoneRef.current = false;
+    if (loadBannerSuccessTimerRef.current) {
+      clearTimeout(loadBannerSuccessTimerRef.current);
+      loadBannerSuccessTimerRef.current = null;
+    }
+    setLoadBannerDismissed(false);
+    setLoadBannerSuccess(false);
+  }, [stationsLoading, locationLoading]);
+
+  useLayoutEffect(() => {
+    if (!radiusReady || !fuelReady || stations.length === 0) return;
+    if (loadBannerDismissed) return;
+    if (stationsLoading || locationLoading) return;
+    if (progressStage < 2) return;
+    if (loadBannerCycleDoneRef.current) return;
+
+    loadBannerCycleDoneRef.current = true;
+    setLoadBannerSuccess(true);
+    loadBannerSuccessTimerRef.current = setTimeout(() => {
+      loadBannerSuccessTimerRef.current = null;
+      setLoadBannerDismissed(true);
+      setLoadBannerSuccess(false);
+    }, 1000);
+
+    return () => {
+      if (loadBannerSuccessTimerRef.current) {
+        clearTimeout(loadBannerSuccessTimerRef.current);
+        loadBannerSuccessTimerRef.current = null;
+      }
+      loadBannerCycleDoneRef.current = false;
+    };
+  }, [
+    radiusReady,
+    fuelReady,
+    stations.length,
+    stationsLoading,
+    locationLoading,
+    progressStage,
+    loadBannerDismissed,
+  ]);
+
   const loadProgressBanner = useMemo(() => {
     if (!radiusReady || !fuelReady) return null;
     if (stations.length === 0) return null;
+
+    const noGpsSteady =
+      !stationsLoading && !locationLoading && !gpsReady;
+
+    if (noGpsSteady) {
+      return (
+        <View style={styles.progressWrap}>
+          <Text style={styles.progressNoGps}>
+            No se está usando el GPS: solo verás precios ordenados, sin distancias ni detalle por
+            estación.
+          </Text>
+          {locationError ? (
+            <Text style={styles.progressNoGpsDetail}>{locationError}</Text>
+          ) : null}
+        </View>
+      );
+    }
+
+    if (loadBannerDismissed) return null;
+    if (loadBannerSuccess) {
+      return (
+        <View style={styles.progressWrap}>
+          <Text style={styles.progressSuccess}>Carga completada con éxito</Text>
+        </View>
+      );
+    }
     const pct = progressStage >= 2 ? 100 : progressStage >= 1 ? 50 : 0;
     return (
       <View style={styles.progressWrap}>
@@ -341,6 +434,9 @@ export function HomeScreen({ navigation }: Props) {
     locationLoading,
     locationError,
     progressStage,
+    loadBannerDismissed,
+    loadBannerSuccess,
+    gpsReady,
   ]);
 
   const emptyMessage = useMemo(() => {
@@ -442,13 +538,22 @@ export function HomeScreen({ navigation }: Props) {
         <Text style={styles.label}>Radio (km)</Text>
         <View style={styles.row}>
           <TextInput
+            ref={radiusFieldRef}
             value={radiusInput}
             onChangeText={setRadiusInput}
-            keyboardType="decimal-pad"
+            keyboardType="number-pad"
+            returnKeyType="done"
+            blurOnSubmit
+            onSubmitEditing={() => void applyRadius()}
             style={styles.input}
             accessibilityLabel="Radio máximo en kilómetros para listar bencineras"
           />
-          <Pressable style={styles.applyBtn} onPress={() => void applyRadius()}>
+          <Pressable
+            style={styles.applyBtn}
+            onPress={() => void applyRadius()}
+            accessibilityRole="button"
+            accessibilityLabel="Aplicar radio de búsqueda"
+          >
             <Text style={styles.applyBtnText}>Aplicar</Text>
           </Pressable>
         </View>
@@ -479,7 +584,7 @@ export function HomeScreen({ navigation }: Props) {
 
       {loadProgressBanner}
 
-      {locationError && stations.length > 0 ? (
+      {locationError && stations.length > 0 && (stationsLoading || locationLoading || gpsReady) ? (
         <View style={styles.locationBanner}>
           <Text style={styles.locationBannerText}>{locationError}</Text>
         </View>
@@ -628,6 +733,26 @@ const styles = StyleSheet.create({
   progressHint: {
     fontSize: 12,
     color: theme.colors.muted2,
+  },
+  progressSuccess: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.accent,
+    textAlign: 'center',
+  },
+  progressNoGps: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.danger,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  progressNoGpsDetail: {
+    fontSize: 12,
+    color: theme.colors.danger,
+    textAlign: 'center',
+    lineHeight: 17,
+    opacity: 0.92,
   },
   locationBanner: {
     backgroundColor: '#FEF3C7',

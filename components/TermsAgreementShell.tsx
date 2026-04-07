@@ -1,8 +1,4 @@
-import { useEffect } from 'react';
 import {
-  BackHandler,
-  Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,61 +16,47 @@ import {
 import { theme } from '../constants/theme';
 
 type Props = {
-  visible: boolean;
   onAccept: () => void;
 };
 
-export function TermsModal({ visible, onAccept }: Props) {
+/** Contenido de términos (misma UI que el antiguo modal, sin envoltorio Modal). */
+export function TermsAgreementShell({ onAccept }: Props) {
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    if (!visible || Platform.OS !== 'android') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
-    return () => sub.remove();
-  }, [visible]);
-
   return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-      statusBarTranslucent
-      onRequestClose={() => {}}
-    >
-      <View style={[styles.overlay, { paddingTop: insets.top }]}>
-        <View style={styles.card}>
-          <Text style={styles.mainTitle}>{TERMS_TITLE}</Text>
-          <Text style={styles.meta}>Última actualización: {TERMS_LAST_UPDATED}</Text>
+    <View style={[styles.overlay, { paddingTop: insets.top }]}>
+      <View style={styles.card}>
+        <Text style={styles.mainTitle}>{TERMS_TITLE}</Text>
+        <Text style={styles.meta}>Última actualización: {TERMS_LAST_UPDATED}</Text>
 
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator
-          >
-            <Text style={styles.intro}>{TERMS_INTRO}</Text>
-            {TERMS_SECTIONS.map((section) => (
-              <View key={section.title} style={styles.section}>
-                <Text style={styles.sectionTitle}>{section.title}</Text>
-                {section.paragraphs.map((p, i) => (
-                  <Text key={i} style={styles.paragraph}>
-                    {p}
-                  </Text>
-                ))}
-              </View>
-            ))}
-          </ScrollView>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator
+        >
+          <Text style={styles.intro}>{TERMS_INTRO}</Text>
+          {TERMS_SECTIONS.map((section) => (
+            <View key={section.title} style={styles.section}>
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+              {section.paragraphs.map((p, i) => (
+                <Text key={i} style={styles.paragraph}>
+                  {p}
+                </Text>
+              ))}
+            </View>
+          ))}
+        </ScrollView>
 
-          <Pressable
-            style={[styles.acceptBtn, { marginBottom: Math.max(insets.bottom, 16) }]}
-            onPress={onAccept}
-            accessibilityRole="button"
-            accessibilityLabel="Aceptar términos y condiciones"
-          >
-            <Text style={styles.acceptBtnText}>Aceptar</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          style={[styles.acceptBtn, { marginBottom: Math.max(insets.bottom, 16) }]}
+          onPress={onAccept}
+          accessibilityRole="button"
+          accessibilityLabel="Aceptar términos y condiciones"
+        >
+          <Text style={styles.acceptBtnText}>Aceptar</Text>
+        </Pressable>
       </View>
-    </Modal>
+    </View>
   );
 }
 

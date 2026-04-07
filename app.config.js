@@ -5,10 +5,16 @@
  */
 require('dotenv').config();
 
-/** EAS no enlaza si `extra.eas.projectId` está vacío; `.env` con `EAS_PROJECT_ID=` debe ignorarse. */
+/** Proyecto EAS @josemanuel147/bencina-app (creado con eas build / eas init). */
+const EAS_PROJECT_ID_DEFAULT = '77e807ab-d5b7-4624-8dbf-73f422bcdea8';
+
+/**
+ * `EAS_PROJECT_ID` en `.env` puede sobreescribir (p. ej. otro entorno). Si no está, usa el de arriba.
+ */
 const easProjectId =
-  (process.env.EAS_PROJECT_ID && process.env.EAS_PROJECT_ID.trim()) ||
-  '81feaddf-1973-425e-ac55-3cc0553ab2d0';
+  process.env.EAS_PROJECT_ID && process.env.EAS_PROJECT_ID.trim()
+    ? process.env.EAS_PROJECT_ID.trim()
+    : EAS_PROJECT_ID_DEFAULT;
 
 const androidAdMobAppId =
   (process.env.ADMOB_ANDROID_APP_ID || '').trim() ||
@@ -21,8 +27,9 @@ module.exports = {
   expo: {
     name: 'Bencina App',
     slug: 'bencina-app',
-    version: '1.0.2',
+    version: '1.0.1',
     orientation: 'portrait',
+    scheme: 'bencina-app',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
     splash: {
@@ -32,22 +39,24 @@ module.exports = {
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.bencinabarata.app',
+      bundleIdentifier: 'com.bencinaapp.app',
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           'Usamos tu ubicación para ordenar bencineras por precio y distancia.',
       },
     },
     android: {
+      /** Evita que el teclado tape el botón Aplicar al editar el radio (comportamiento típico en Android). */
+      softwareKeyboardLayoutMode: 'resize',
       adaptiveIcon: {
         backgroundColor: '#E6F4FE',
         foregroundImage: './assets/android-icon-foreground.png',
         backgroundImage: './assets/android-icon-background.png',
         monochromeImage: './assets/android-icon-monochrome.png',
       },
-      versionCode: 3,
+      versionCode: 2,
       predictiveBackGestureEnabled: false,
-      package: 'com.bencinabarata.app',
+      package: 'com.bencinaapp.app',
       permissions: ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION'],
     },
     web: {

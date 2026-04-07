@@ -1,16 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import mobileAds from 'react-native-google-mobile-ads';
 
 import { BrandHeaderTitle } from './components/BrandHeaderTitle';
-import { TermsModal } from './components/TermsModal';
 import { CalculatorScreen } from './screens/CalculatorScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { StationDetailScreen } from './screens/StationDetailScreen';
+import { TermsScreen } from './screens/TermsScreen';
 import { STORAGE_KEYS } from './constants/defaults';
 import type { RootStackParamList } from './types/navigation';
 import { theme } from './constants/theme';
@@ -28,10 +28,10 @@ const appTheme = {
   },
 };
 
-type TermsGate = 'loading' | 'show' | 'done';
+type TermsBootstrap = 'loading' | { accepted: boolean };
 
 export default function App() {
-  const [termsGate, setTermsGate] = useState<TermsGate>('loading');
+  const [termsBootstrap, setTermsBootstrap] = useState<TermsBootstrap>('loading');
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -43,24 +43,14 @@ export default function App() {
     void (async () => {
       try {
         const v = await AsyncStorage.getItem(STORAGE_KEYS.termsAccepted);
-        setTermsGate(v === '1' ? 'done' : 'show');
+        setTermsBootstrap({ accepted: v === '1' });
       } catch {
-        setTermsGate('show');
+        setTermsBootstrap({ accepted: false });
       }
     })();
   }, []);
 
-  const handleAcceptTerms = useCallback(() => {
-    void (async () => {
-      try {
-        await AsyncStorage.setItem(STORAGE_KEYS.termsAccepted, '1');
-      } finally {
-        setTermsGate('done');
-      }
-    })();
-  }, []);
-
-  if (termsGate === 'loading') {
+  if (termsBootstrap === 'loading') {
     return (
       <SafeAreaProvider>
         <View style={{ flex: 1, backgroundColor: theme.colors.background }} />
@@ -72,12 +62,21 @@ export default function App() {
     <SafeAreaProvider>
       <NavigationContainer theme={appTheme}>
         <Stack.Navigator
-          initialRouteName="Home"
+          initialRouteName={termsBootstrap.accepted ? 'Home' : 'Terms'}
           screenOptions={{
             headerShadowVisible: false,
             headerTitleStyle: { fontWeight: '600', color: theme.colors.text },
           }}
         >
+          <Stack.Screen
+            name="Terms"
+            component={TermsScreen}
+            options={{
+              headerShown: false,
+              gestureEnabled: false,
+              animation: 'fade',
+            }}
+          />
           <Stack.Screen
             name="Home"
             component={HomeScreen}
@@ -95,7 +94,6 @@ export default function App() {
           />
         </Stack.Navigator>
       </NavigationContainer>
-      <TermsModal visible={termsGate === 'show'} onAccept={handleAcceptTerms} />
     </SafeAreaProvider>
   );
 }
